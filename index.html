@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pasapalabra Salud y Seguridad</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;font-family:Arial,sans-serif;
+ background:linear-gradient(135deg,#101b35,#233f70);
+ color:white;min-height:100vh;padding:20px
+}
+.container{max-width:900px;margin:auto;text-align:center}
+h1{color:#70e1a1;font-size:32px}
+.subtitle{color:#d5def5}
+.panel{
+ background:#fff;color:#17233b;border-radius:18px;
+ padding:22px;margin:20px 0;box-shadow:0 8px 25px #0004
+}
+#timer{font-size:35px;font-weight:bold;color:#e34b50}
+#rosco{
+ display:flex;flex-wrap:wrap;justify-content:center;
+ gap:8px;margin:20px auto;max-width:650px
+}
+.letter{
+ width:43px;height:43px;border-radius:50%;
+ background:#315b9e;color:white;font-weight:bold;
+ display:flex;align-items:center;justify-content:center;
+ border:2px solid white
+}
+.letter.active{background:#ffbd38;color:#18233a}
+.letter.correct{background:#25a76b}
+.letter.wrong{background:#e34b50}
+.letter.pass{background:#79869c}
+#question{font-size:20px;font-weight:bold;min-height:95px}
+input{
+ padding:13px;width:90%;max-width:450px;
+ border-radius:9px;border:2px solid #b8c7df;font-size:17px
+}
+button{
+ border:0;border-radius:10px;padding:13px 20px;
+ font-weight:bold;font-size:16px;cursor:pointer;margin:7px
+}
+#answerBtn{background:#20a66a;color:white}
+#passBtn{background:#ffbd38;color:#18233a}
+#restartBtn{background:#315b9e;color:white}
+.score{font-size:20px;font-weight:bold}
+#message{font-weight:bold;min-height:28px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🛡️ PASAPALABRA</h1>
+<div class="subtitle">SALUD Y SEGURIDAD · PRIMARK</div>
+
+<div class="panel">
+<div>⏱️ TIEMPO RESTANTE</div>
+<div id="timer">08:00</div>
+<div class="score">Aciertos: <span id="hits">0</span> |
+Errores: <span id="errors">0</span></div>
+</div>
+
+<div id="rosco"></div>
+
+<div class="panel">
+<div id="question">Pulsa COMENZAR para iniciar el reto.</div>
+<input id="answer" placeholder="Escribe tu respuesta..." autocomplete="off">
+<div>
+<button id="answerBtn" onclick="checkAnswer()">✔ ACIERTO / RESPONDER</button>
+<button id="passBtn" onclick="passQuestion()">⏭ PASAPALABRA</button>
+</div>
+<div id="message"></div>
+<button id="restartBtn" onclick="startGame()">🔄 COMENZAR / REINICIAR</button>
+</div>
+</div>
+
+<script>
+const data=[
+["A","Con la A: Suceso que provoca daño o lesión a una persona durante el trabajo.","ACCIDENTE"],
+["B","Con la B: Equipo de protección que se utiliza para proteger las manos.","GUANTES"],
+["C","Con la C: Elemento que se utiliza para proteger la cabeza frente a determinados riesgos.","CASCO"],
+["D","Con la D: Situación de peligro que puede provocar un daño.","DESLIZAMIENTO"],
+["E","Con la E: Acción de abandonar un lugar ante una emergencia siguiendo las instrucciones establecidas.","EVACUACION"],
+["F","Con la F: Elemento que permite combatir un fuego en su fase inicial.","EXTINTOR"],
+["G","Con la G: Conjunto de medidas para evitar accidentes y daños a la salud.","SEGURIDAD"],
+["H","Con la H: Documento o procedimiento que recoge instrucciones para realizar una tarea de forma segura.","HOJA"],
+["I","Con la I: Suceso no deseado que puede causar daños o lesiones.","INCIDENTE"],
+["J","Con la J: Conjunto de normas y medidas destinadas a prevenir riesgos en el trabajo.","SEGURIDAD"],
+["K","Con la K: Unidad de medida que aparece habitualmente en el peso de cargas y mercancías.","KILO"],
+["L","Con la L: Elemento de protección que se utiliza para proteger los ojos.","GAFAS"],
+["M","Con la M: Elemento que permite señalizar o advertir de un riesgo.","MARCA"],
+["N","Con la N: Conjunto de reglas que deben cumplirse para trabajar de forma segura.","NORMAS"],
+["Ñ","Contiene la Ñ: Acción de enseñar y preparar a una persona para realizar un trabajo de forma segura.","ENSEÑANZA"],
+["O","Con la O: Elemento que debe mantenerse limpio y ordenado para evitar accidentes.","ORDEN"],
+["P","Con la P: Medida destinada a evitar que ocurra un accidente.","PREVENCION"],
+["Q","Con la Q: Producto que puede presentar riesgos y debe utilizarse siguiendo sus instrucciones.","QUIMICO"],
+["R","Con la R: Posibilidad de que un peligro provoque un daño.","RIESGO"],
+["S","Con la S: Elemento que permite salir de un edificio en caso de emergencia.","SALIDA"],
+["T","Con la T: Equipo de protección que protege los pies en determinados trabajos.","BOTAS"],
+["U","Con la U: Acción de utilizar correctamente un equipo o herramienta.","USO"],
+["V","Con la V: Elemento que permite acceder al aire y que no debe bloquearse.","VENTILACION"],
+["W","Con la W: Abreviatura de la web, utilizada para acceder a recursos e información en internet.","WEB"],
+["X","Contiene la X: Acción de comprobar que una zona o equipo está en condiciones adecuadas.","INSPECCION"],
+["Y","Con la Y: En inglés, palabra que significa seguridad y que aparece en algunos mensajes de prevención.","SAFETY"],
+["Z","Con la Z: Calzado de protección que se utiliza para prevenir lesiones en los pies.","ZAPATOS"]
+];
+
+let current=0, hits=0, errors=0, time=480;
+let timer=null, playing=false, completed=[];
+const rosco=document.getElementById("rosco");
+
+data.forEach((item,i)=>{
+ let el=document.createElement("div");
+ el.className="letter";
+ el.id="l"+i;
+ el.textContent=item[0];
+ rosco.appendChild(el);
+});
+
+function normalize(s){
+ return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+ .toUpperCase().replace(/[^A-ZÑ]/g,"").trim();
+}
+
+function updateRosco(){
+ data.forEach((d,i)=>{
+  let el=document.getElementById("l"+i);
+  el.className="letter";
+  if(completed[i]==="correct")el.classList.add("correct");
+  if(completed[i]==="wrong")el.classList.add("wrong");
+  if(completed[i]==="pass")el.classList.add("pass");
+ });
+ if(current<data.length && playing)
+  document.getElementById("l"+current).classList.add("active");
+}
+
+function findNext(){
+ let start=current;
+ do{
+  current=(current+1)%data.length;
+  if(!completed[current])return true;
+ }while(current!==start);
+ return false;
+}
+
+function showQuestion(){
+ if(!playing)return;
+ if(completed.every(Boolean)){endGame();return;}
+ while(completed[current])findNext();
+ document.getElementById("question").textContent=data[current][1];
+ document.getElementById("answer").value="";
+ document.getElementById("answer").focus();
+ updateRosco();
+}
+
+function checkAnswer(){
+ if(!playing)return;
+ let answer=normalize(document.getElementById("answer").value);
+ if(!answer){document.getElementById("message").textContent="Escribe una respuesta.";return;}
+ if(answer===normalize(data[current][2])){
+  completed[current]="correct";hits++;
+  document.getElementById("message").textContent="¡Correcto! 🎉";
+ }else{
+  completed[current]="wrong";errors++;
+  document.getElementById("message").textContent="Incorrecto. La respuesta era: "+data[current][2];
+ }
+ updateScore();
+ setTimeout(()=>{if(playing){findNext();showQuestion();}},700);
+}
+
+function passQuestion(){
+ if(!playing)return;
+ completed[current]="pass";
+ document.getElementById("message").textContent="Pasapalabra. Volveremos a esta letra.";
+ findNext();
+ showQuestion();
+}
+
+function updateScore(){
+ document.getElementById("hits").textContent=hits;
+ document.getElementById("errors").textContent=errors;
+}
+
+function startGame(){
+ clearInterval(timer);
+ current=0;hits=0;errors=0;time=480;
+ completed=[];
+ playing=true;
+ document.getElementById("message").textContent="¡Mucho ánimo!";
+ updateScore();updateRosco();showQuestion();
+ timer=setInterval(()=>{
+  time--;
+  let m=Math.floor(time/60),s=time%60;
+  document.getElementById("timer").textContent=
+  String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  if(time<=0)endGame();
+ },1000);
+}
+
+function endGame(){
+ playing=false;clearInterval(timer);
+ document.getElementById("question").textContent="🏁 ¡FIN DEL PASAPALABRA!";
+ document.getElementById("answer").disabled=true;
+ document.getElementById("answerBtn").disabled=true;
+ document.getElementById("passBtn").disabled=true;
+ document.getElementById("message").textContent=
+ "Resultado final: "+hits+" aciertos y "+errors+" errores. Letras pendientes: "+completed.filter(x=>!x).length+".";
+ updateRosco();
+}
+
+document.getElementById("answer").addEventListener("keydown",e=>{
+ if(e.key==="Enter")checkAnswer();
+});
+</script>
+</body>
+</html>
